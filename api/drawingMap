@@ -1,0 +1,402 @@
+
+var mymap = L.map('mapid').setView([35, -79], 7);
+
+/* var myCities = [  //NAME AND BOUNDS OF CITIES 
+  {name:"Charlotte",bnds:[[34,-81.5],[36,-80]]},
+  {name:"Raleigh", bnds:[[35,-79.5],[36.5,-77.5]]},
+  {name:"Greensboro ",bnds:[[35,-80.5],[37,-79]]},
+  {name:"Winston-Salem",bnds:[[35,-81],[37,-79.5]]},
+  {name:"Durham",bnds:[[35,-79.5],[37,-78]]},
+  {name:"Fayetteville",bnds:[[34,-79.5],[36,-78]]},
+  {name:"Cary",bnds:[[35,-79.5],[36.5,-77.8]]},
+  {name:"Wilmington",bnds:[[33.5,-78.5],[35,-77]]},
+  {name:"High Point",bnds:[[35,-81],[37,-79]]},
+  {name:"Greenville",bnds:[[34.75,-78.2],[37.25,-76.6]]},
+] */
+    
+ 
+
+L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+    maxZoom: 18,
+    id: 'mapbox.streets',
+    accessToken: 'pk.eyJ1IjoibGlseWdlZXJ0cyIsImEiOiJjamV2eHJwOGQwdDV0MnhtbXUyOWNqbmUyIn0.TsQCPYuPy0E0xEfcNt5RYw'
+}).addTo(mymap);
+
+/* Here we draw the outline of North Carolina on a map of the united states. 
+*/
+var stateoutline = L.polygon([
+    [36.55 ,-75.929],
+    [36.55 ,-75.966],
+    [36.55 ,-75.884], 
+    [36.55 ,-75.894],
+    [36.55 ,-75.988],
+    [36.55 ,-76.006],
+    [36.55 ,-76.035],
+    [36.55 ,-76.156],
+    [36.55 ,-76.161],
+    [36.542 ,-78.917],
+    [36.542 ,-79.138],
+    [36.588 ,-81.677],
+    [36.338 ,-81.706],
+    [36.301 ,-81.908],
+    [36.12 ,-82.033],
+    [36.116 ,-82.354],
+    [35.955 ,-82.561],
+    [36.065 ,-82.638],
+    [35.944 ,-82.898],
+    [35.773 ,-82.993],
+    [35.562 ,-83.499],
+    [35.518 ,-83.881],
+    [35.274 ,-84.046],
+    [35.225 ,-84.29],
+    [34.988 ,-84.322],
+    [35 ,-83.108],
+    [35.215 ,-82.394],
+    [35.149 ,-81.032],
+    [35.047 ,-81.043],
+    [35.107 ,-80.935],
+    [34.935 ,-80.782],
+    [34.819 ,-80.797],
+    [34.804 ,-79.675],
+    [33.856 ,-78.556],
+    [33.838483,-77.961731],
+    [34.482788,-77.433701],
+    [34.580083,-76.533508],
+    [35.218697,-75.52002],
+    [35.588085,-75.451355],
+    [35.721988,-75.484314]
+    ]).addTo(mymap);
+    
+var selectedCity = myCities[0]
+var hoodsLayer
+var geoJsonLayer
+var highlightHoods;
+var highlightCount = 0
+var c = new L.Control.Zoom({position:'topright'})
+var lg = new L.layerGroup()
+var overlg = new L.layerGroup()
+var getJSON = {abort: function () {}}
+var downloadURL = myPath+"/sql?format=shp&q=select+*+from+"+tblName
+var ajaxrunning = false
+var flagIndex = null
+var poly//var for leaflet draw 
+var drawnItems//var for drawn polys
+var hStyle = {
+    "stroke":true,
+    "color":"#cd0000",//data.rows[i].strokeColor,
+    "weight":2,
+    "opacity":1,
+    "fill":false,
+    "clickable":false
+}
+var fillArr = ["#E7C265","#8AD4E2","#ECACC1","#95D18F","#E9D5B3","#E1EF7E","#F69D92","#9CD7BF","#B2BD75","#D1D3CF","#DAC1E1","#B3C69F","#D1AB6D","#E9D898","#B0CBE6","#D9B5AB","#86E9E1","#DBEA97","#D1F1E4","#DDEBBB","#DFB991","#F3AD8E","#8CDEB5","#EDAF69","#B9F2A6","#8DC8C4","#C2E887","#E5D670","#EAD483","#C4BF6A"]
+ var toner = L.tileLayer('http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png', {
+    attribution: '<a href="http://stamen.com/" target="_blank" >Stamen</a>'
+})
+var sat = L.tileLayer("http://oatile{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.jpg", {
+  attribution: 'Search<a href="http://www.mapquest.com/" target="_blank"><img src="http://developer.mapquest.com/content/osm/mq_logo.png"></a>, NASA/JPL, Caltech, USDA',
+  subdomains: '1234'
+});
+
+
+// end of declaration and construction of vars/objects
+
+function go() {
+  $('#submitPolyBtn').hide();
+/*     map = new L.Map('map', {
+    zoomControl:false,
+    center: [0,0],
+    zoom: 2,
+    
+      }); */
+      
+  var baseMaps = {
+    "Road": toner,
+    "Aerial": sat
+  };
+  c.addTo(map);
+  L.control.layers(baseMaps).addTo(map);
+  lg.addTo(map);
+  overlg.addTo(map);
+  toner.addTo(map);
+  map.fitBounds(selectedCity.bnds);
+  
+  // draw controls
+  drawnItems = new L.FeatureGroup();
+  mymap.addLayer(drawnItems);
+  poly = new L.Draw.Polygon(mymap, {
+      allowIntersection: false,
+      showArea: false,
+      drawError: {
+      color: '#b00b00',
+      timeout: 1000
+    },
+    icon: new L.DivIcon({
+      iconSize: new L.Point(10,10),
+      className: 'leaflet-div-icon leaflet-editing-icon'
+    }),
+    shapeOptions: {
+      stroke: true,
+      color: '#ff0000',
+      weight: 1,
+      opacity: 0.7,
+      fill: true,
+      fillColor: null, //same as color by default
+      fillOpacity: 0.2,
+      clickable: true
+    },
+    guidelineDistance: 5,
+  })
+  
+    // Set the title to show on the polygon button
+    L.drawLocal.draw.toolbar.buttons.polygon = 'Draw a sexy polygon!';
+
+    var drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw:false,
+      edit:false
+      
+    });
+    mymap.on('draw:created', function (e) {
+      console.log(e);
+      e.layer.editing.enable();
+      var type = e.layerType,
+        layer = e.layer;
+      drawnItems.addLayer(layer);
+
+      $('#submitPolyBtn').show();
+    });
+    
+    mymap.on('draw:drawstart', function (e) {
+      console.log(e);
+    });
+
+    mymap.on('draw:edited', function (e) {
+      var layers = e.layers;
+      var countOfEditedLayers = 0;
+      layers.eachLayer(function(layer) {
+        countOfEditedLayers++;
+      });
+      console.log("Edited " + countOfEditedLayers + " layers");
+    });
+}
+// end of draw controls
+
+//make teh nav and city buttons-- City buttons
+  $("#navDiv").prepend('<a class="navbar-brand" href="'+brandLink+'" target="_blank">'+brandText+'</a>');
+  $("#mapItMenu").append('<li style="top:-9px;padding-right:2px;position:relative"><h3 class="navText">{</h3></li>');
+for(var i = 0; i<  myCities.length; i++){
+    $("#mapItMenu").append('<li id = '+myCities[i].name+' class="cityState" name='+i+'><a href="#"><span class="tab">'+myCities[i].name+'</span></a></li>');
+    if(i===0){
+        $("#"+myCities[i].name+"").addClass("active");
+    }
+  } 
+   $('.cityState').click(function() {
+    console.log('cityclicked');
+    $('.cityState').removeClass('active');
+    $(this).addClass('active');
+    document.getElementById("mapTitle").innerHTML = this.id+"<font size='4'><b>NEIGHBORHOODS</b></font>"; 
+      mymap.fitBounds(myCities[$(this).attr('name')].bnds);
+      selectedCity = myCities[$(this).attr('name')];
+  });
+  $("#mapItMenu").append('<li style="top:-9px;padding-right:2px;position:relative"><h3 class="navText">}</h3></li>');  
+  
+  	//add listeners
+    
+    $('#aboutModal').modal('show')
+	  $("#resultMapBtn").click(function(e){
+  });
+  $('#resultsInSpace').click (
+    function (e) {
+      mapBackground = !$('#resultsInSpace').hasClass('active');
+      if(!$('#resultsInSpace').hasClass('active')){
+        toner.setOpacity(0);
+        sat.setOpacity(0);
+      }else{
+        toner.setOpacity(1);
+        sat.setOpacity(1);
+      }
+  });
+  
+  $("#flagBtn").on('click',function(){
+    $('#flagModal').modal('hide');
+    postData( "php/flag.php",{
+      table: tblName,
+      id: flagIndex
+    });
+  });
+  
+  $("#downloadBtn").on('click',function(){
+    window.open(downloadURL);
+    $('#downloadModal').modal('hide');
+  });
+  
+  $("#accordion").slimScroll({ height:'100%', position: 'left', distance:0, railcolor:'#ffffff', color:'#555555'});
+
+  $('#startPolyBtn').on('click',function(){
+    drawnItems.clearLayers();
+    poly.enable();
+    $('#submitPolyBtn').hide();
+  });
+  
+  $('#deletePolyBtn').on('click',function(){
+    drawnItems.clearLayers();
+    poly.disable();
+    $('#submitPolyBtn').hide();
+  });
+  
+  $("#submitPolyBtn").click(function(e){
+    //CHECK IF POLYGON IS COMPLETE
+    if(drawnItems.getLayers().length<1){bootstrap_alert.warning('Oops, you need to map a neighborhood first.'); }
+    //ELSE OPEN THE SUBMIT DIALOGUE
+    else{
+      $("#submitModal").modal('show');
+      getExistingNeighborhoodNames();
+    }
+  });
+  
+    $(".cty-group > button.btn").on("click", function(){
+    num = this.name;
+    cityYears = num;
+  });
+  $(".nbr-group > button.btn").on("click", function(){
+    num = this.name;
+    nbrhdYears = num;
+  });
+  $("#allSubmitBtn").click(function(e){
+  //CHECK IF Neighborhood has a name
+    if (!notEmpty(document.getElementById('neighborhoodName'))){
+      alert('Please enter a neighborhood name, Thanks!');  
+      return;
+    };
+    
+    currentNeighborhood = document.getElementById('neighborhoodName').value;
+    currentDescription = document.getElementById('neighborhoodDescription').value;
+    currentCity = selectedCity.name;
+    document.getElementById('neighborhoodName').value = '';
+    document.getElementById('neighborhoodDescription').value= '';
+    $('#deletePolyBtn').hide();
+    $('#submitPolyBtn').hide();
+    $('#startPolyBtn').show();
+    $("#submitModal").modal('hide');
+    $(".cty-group > button.btn").removeClass('active');
+    $(".nbr-group > button.btn").removeClass('active');
+    //cityYears = 999;
+    //nbrhdYears = 999;
+    $('.typeahead').unbind();
+    
+    drawnItems.eachLayer(function (layer) {
+      var a = layer._latlngs;
+      var coords = "";
+      console.log('latlng Arr: length: '+a.length+ " " +a);
+        for (var i = 0; i < a.length; i++) {
+          var lat = (a[i].lat);//.toFixed(4); // rid of rounding that was there for url length issue during dev
+          var lng = (a[i].lng);//.toFixed(4); // rid of rounding that was there for url length issue during dev
+          coords += '['+lng + ',' + lat+'],';
+        if(i==a.length-1){
+          var lat = (a[0].lat).toFixed(4);
+            var lng = (a[0].lng).toFixed(4);
+          coords += '['+lng + ',' + lat+']';
+        }
+      }
+      
+      postData( "php/add.php",{
+        table: tblName,
+        coords: coords,
+        city: currentCity,
+        description: (currentDescription.replace(/'/g,"''")).replace(/"/g,"''"),
+        name: (currentNeighborhood.replace(/'/g,"''")).replace(/"/g,"''"),
+       // cityYears: cityYears,
+    //    hoodYears: nbrhdYears
+      });
+      drawnItems.clearLayers();
+    });
+    alert("Your neighborhood has been added! Draw more neighborhoods or take a look what has been added so far by clicking 'View Maps'.");
+  });
+
+ $(".enableTooltipsLeft").tooltip({container:"body",placement:"left"});
+  if(window.location.hash) {
+    if(window.location.hash.substr(1)==="view"){
+      $('#resultMapBtn').addClass('active');
+      $('#makeMapModeBtn').removeClass('active');
+      goViewState();
+    }
+ // }else {
+    // Fragment doesn't exist so, what are ya gonna do?
+  //  return null;
+ //  } 
+  } 
+ 
+ // more functions
+ 
+ var loadHoods = function(){
+  //remove curren tresults layer
+  lg.clearLayers();
+  cartodb.createLayer(mymap, {
+    user_name: usrName,
+    table_name: tblName,
+    zIndex:'999',
+    type: 'cartodb',
+    cartodb_logo: false,
+    query: "SELECT * FROM "+tblName+" where flag = false",
+    tile_style:'#'+tblName+' {line-opacity:.8;line-color: #cd0000;line-width:1;polygon-fill:#fff;polygon-opacity:0.1;}::accent{image-filters: agg-stack-blur(3,3);line-opacity:.2;line-color: #cd0000;line-join:round;polygon-opacity:.01;[zoom=2] { line-width: 4; } [zoom=3] { line-width: 6; } [zoom=4] { line-width: 8; } [zoom>5] { line-width: 10; }}',
+    interactivity: 'cartodb_id,name, description',
+    featureClick: function(ev, latlng, pos, data){hoodClickHandler(ev, latlng, pos, data)},
+    featureOver: function(ev, latlng, pos, data){hoodOverHandler(ev, latlng, pos, data)},
+    featureOut: function(ev,latlng, pos, data){hoodOutHandler(ev,latlng,pos,data)}
+  })
+  .done(function(layer) {
+    lg.addLayer(layer);
+  });
+ }
+  
+ var hoodOverHandler = function(ev,latlng,pos,data){
+  $('#map').css('cursor', 'pointer');
+ }
+ var hoodOutHandler = function(ev,latlng,pos,data){
+  $('#map').css('cursor', 'auto');
+ }
+ var hoodClickHandler = function(ev,latlng,pos,data){
+  console.log(data);
+  //$('#map').css('cursor', 'auto');
+  hoodClickGetter(latlng);
+ }
+  
+ var hoodClickGetter = function(ll){
+  getJSON.abort();
+  getJSON = $.ajax(
+    {url:myPath+"/sql?q=SELECT name FROM "+tblName+" WHERE ST_Intersects( the_geom, ST_SetSRID((ST_POINT("+ll.lng+", "+ll.lat+")) , 4326)) AND flag = false GROUP BY name ORDER BY name ASC",
+    crossDomain:true,
+      dataType:"jsonp",
+      error: function (xhr, text_status, error_thrown) {
+        console.log(text_status)
+                    if (text_status != "abort") {
+                       // get_data_from_server();  // Try request again.
+                    }
+                }
+      }).done(function(data) {
+        var pgArr = '{';
+        var unique = false;
+        //build array for geojson query and see if the hood is already highlighted
+        for(var i = 0;i<data.rows.length;i++){
+          boo = true;
+          for(var h=0;h<highlightHoods.length;h++){
+              if(data.rows[i].name===highlightHoods[h].name){
+                boo = false; 
+                break;
+              }
+          }
+          if(boo){pgArr+=data.rows[i].name+',';unique = true;}
+        }
+        if(!unique){
+          return;
+        }
+        pgArr = pgArr.substring(0, pgArr.length - 1)+'}';
+        pgArr = pgArr.replace(/'/g,"''");
+        pgArr = pgArr.replace(/"/g,"''");
+        getNewHoods(pgArr);
+      });
+ };
+    
+
