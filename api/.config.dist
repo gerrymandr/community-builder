@@ -1,0 +1,8 @@
+[mysql]
+host = MY_DB_HOST
+database = MY_DB_NAME
+username = MY_DB_USER
+password = MY_DB_PASSWORD
+
+[census]
+key = MY_CENSUS_KEY
