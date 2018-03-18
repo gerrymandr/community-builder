@@ -1,4 +1,4 @@
-[mysql]
+[db]
 host = MY_DB_HOST
 database = MY_DB_NAME
 username = MY_DB_USER
