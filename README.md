@@ -1,4 +1,4 @@
-# community-builder
+# Community Builder
 
 ## Overview
 
@@ -43,6 +43,8 @@ Possible, but non-essential, future features include:
 - Upvote or comment on other communities
 - View aggregated census demographics on the community they have created
 
+A simple conceptual demo of the drawing process is available [here](http://communitybuilder.bigdatalittledata.net/demo/demo.html).
+
 ![Map Demo](img/communitybuilderdemo2.png)
 
 ### Administrators
@@ -84,4 +86,4 @@ Many decisions were made hastily for purposes of the hackathon. Informed decisio
 
 ### Build the Thing
 
-Then lets build the thing.
+Then let's build the thing. Well, first let's do some actual software design and user flows. THEN build the thing.
