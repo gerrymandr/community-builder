@@ -5,7 +5,6 @@ import pymysql
 settings = configparser.ConfigParser()
 settings.read(".config")
 
-
 def get_db_connection():
     return pymysql.connect(host=settings['db']['host'],
                            user=settings['db']['username'],
