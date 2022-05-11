@@ -1,6 +1,0 @@
-api/.env/
-api/.config
-api/.idea*
-api/__pycache__
-data/
-notebooks/
